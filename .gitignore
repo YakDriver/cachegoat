@@ -27,6 +27,9 @@ go.work.sum
 # env file
 .env
 
+# Built binary
+cachegoat
+
 # Editor/IDE
 # .idea/
 # .vscode/
