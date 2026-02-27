@@ -28,9 +28,10 @@ func (c *Cleaner) Run() error {
 	}
 
 	if c.cfg.LogPath != "" && !c.dryRun {
-		f, _ := os.OpenFile(c.cfg.LogPath, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
-		c.log = f
-		defer f.Close()
+		if f, err := os.OpenFile(c.cfg.LogPath, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644); err == nil {
+			c.log = f
+			defer f.Close()
+		}
 	}
 
 	c.cleanBuildCache()
@@ -49,8 +50,8 @@ func (c *Cleaner) cleanBuildCache() {
 	if sizeGB >= float64(c.cfg.BuildCache.MaxSizeGB) {
 		c.logf("purging build cache (>=%.0fGB threshold)", float64(c.cfg.BuildCache.MaxSizeGB))
 		if !c.dryRun {
-			os.RemoveAll(path)
-			os.MkdirAll(path, 0755)
+			_ = os.RemoveAll(path)
+			_ = os.MkdirAll(path, 0755)
 		}
 	}
 }
@@ -67,12 +68,12 @@ func (c *Cleaner) cleanModCache() {
 		c.logf("pruning mod cache (>=%.0fGB threshold, >%d days old)", float64(c.cfg.ModCache.MaxSizeGB), c.cfg.ModCache.MaxAgeDays)
 		if !c.dryRun {
 			cutoff := time.Now().AddDate(0, 0, -c.cfg.ModCache.MaxAgeDays)
-			filepath.Walk(path, func(p string, info os.FileInfo, err error) error {
+			_ = filepath.Walk(path, func(p string, info os.FileInfo, err error) error {
 				if err != nil || info.IsDir() {
 					return nil
 				}
 				if info.ModTime().Before(cutoff) {
-					os.Remove(p)
+					_ = os.Remove(p)
 				}
 				return nil
 			})
@@ -94,7 +95,7 @@ func goBuildActive() bool {
 
 func dirSizeGB(path string) float64 {
 	var size int64
-	filepath.Walk(path, func(_ string, info os.FileInfo, err error) error {
+	_ = filepath.Walk(path, func(_ string, info os.FileInfo, err error) error {
 		if err == nil && !info.IsDir() {
 			size += info.Size()
 		}

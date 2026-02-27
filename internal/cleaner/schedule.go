@@ -43,7 +43,10 @@ func Unschedule() error {
 }
 
 func scheduleLaunchd(bin string) error {
-	home, _ := os.UserHomeDir()
+	home, err := os.UserHomeDir()
+	if err != nil {
+		return fmt.Errorf("failed to get home dir: %w", err)
+	}
 	plistPath := filepath.Join(home, "Library/LaunchAgents/com.cachegoat.plist")
 
 	plist := fmt.Sprintf(`<?xml version="1.0" encoding="UTF-8"?>
@@ -63,7 +66,7 @@ func scheduleLaunchd(bin string) error {
 `, bin)
 
 	// Unload if exists
-	exec.Command("launchctl", "unload", plistPath).Run()
+	_ = exec.Command("launchctl", "unload", plistPath).Run()
 
 	if err := os.WriteFile(plistPath, []byte(plist), 0644); err != nil {
 		return fmt.Errorf("failed to write plist: %w", err)
@@ -78,20 +81,28 @@ func scheduleLaunchd(bin string) error {
 }
 
 func unscheduleLaunchd() error {
-	home, _ := os.UserHomeDir()
+	home, err := os.UserHomeDir()
+	if err != nil {
+		return fmt.Errorf("failed to get home dir: %w", err)
+	}
 	plistPath := filepath.Join(home, "Library/LaunchAgents/com.cachegoat.plist")
 
-	exec.Command("launchctl", "unload", plistPath).Run()
-	os.Remove(plistPath)
+	_ = exec.Command("launchctl", "unload", plistPath).Run()
+	_ = os.Remove(plistPath)
 
 	fmt.Println("✓ Removed scheduled cleanup")
 	return nil
 }
 
 func scheduleSystemd(bin string) error {
-	home, _ := os.UserHomeDir()
+	home, err := os.UserHomeDir()
+	if err != nil {
+		return fmt.Errorf("failed to get home dir: %w", err)
+	}
 	dir := filepath.Join(home, ".config/systemd/user")
-	os.MkdirAll(dir, 0755)
+	if err := os.MkdirAll(dir, 0755); err != nil {
+		return fmt.Errorf("failed to create systemd dir: %w", err)
+	}
 
 	service := fmt.Sprintf(`[Unit]
 Description=Go cache cleanup
@@ -118,7 +129,7 @@ WantedBy=timers.target
 		return err
 	}
 
-	exec.Command("systemctl", "--user", "daemon-reload").Run()
+	_ = exec.Command("systemctl", "--user", "daemon-reload").Run()
 	if err := exec.Command("systemctl", "--user", "enable", "--now", "cachegoat.timer").Run(); err != nil {
 		return fmt.Errorf("failed to enable timer: %w", err)
 	}
@@ -128,13 +139,16 @@ WantedBy=timers.target
 }
 
 func unscheduleSystemd() error {
-	home, _ := os.UserHomeDir()
+	home, err := os.UserHomeDir()
+	if err != nil {
+		return fmt.Errorf("failed to get home dir: %w", err)
+	}
 	dir := filepath.Join(home, ".config/systemd/user")
 
-	exec.Command("systemctl", "--user", "disable", "--now", "cachegoat.timer").Run()
-	os.Remove(filepath.Join(dir, "cachegoat.service"))
-	os.Remove(filepath.Join(dir, "cachegoat.timer"))
-	exec.Command("systemctl", "--user", "daemon-reload").Run()
+	_ = exec.Command("systemctl", "--user", "disable", "--now", "cachegoat.timer").Run()
+	_ = os.Remove(filepath.Join(dir, "cachegoat.service"))
+	_ = os.Remove(filepath.Join(dir, "cachegoat.timer"))
+	_ = exec.Command("systemctl", "--user", "daemon-reload").Run()
 
 	fmt.Println("✓ Removed scheduled cleanup")
 	return nil
@@ -171,7 +185,7 @@ func unscheduleCron() error {
 
 	cmd := exec.Command("crontab", "-")
 	cmd.Stdin = strings.NewReader(strings.Join(newLines, "\n"))
-	cmd.Run()
+	_ = cmd.Run()
 
 	fmt.Println("✓ Removed scheduled cleanup")
 	return nil

@@ -29,7 +29,7 @@ func Load() (*Config, error) {
 	// Load from ~/.cachegoat.yml if exists
 	home, _ := os.UserHomeDir()
 	if data, err := os.ReadFile(filepath.Join(home, ".cachegoat.yml")); err == nil {
-		yaml.Unmarshal(data, cfg)
+		_ = yaml.Unmarshal(data, cfg)
 	}
 
 	// Environment overrides
@@ -76,6 +76,6 @@ func (c *Config) String() string {
 	var buf bytes.Buffer
 	enc := yaml.NewEncoder(&buf)
 	enc.SetIndent(2)
-	enc.Encode(c)
+	_ = enc.Encode(c)
 	return buf.String()
 }
