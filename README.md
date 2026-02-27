@@ -15,6 +15,7 @@ cachegoat               # run cleanup
 cachegoat --dry-run     # show what would be cleaned
 cachegoat --config      # show resolved configuration
 cachegoat --force       # run even if Go build is active
+cachegoat --help        # show usage
 cachegoat --recommend   # show setup recommendations
 cachegoat --schedule    # create and enable scheduled cleanup
 cachegoat --unschedule  # remove scheduled cleanup
