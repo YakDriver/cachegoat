@@ -30,7 +30,7 @@ func (c *Cleaner) Run() error {
 	if c.cfg.LogPath != "" && !c.dryRun {
 		if f, err := os.OpenFile(c.cfg.LogPath, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644); err == nil {
 			c.log = f
-			defer f.Close()
+			defer func() { _ = f.Close() }()
 		}
 	}
 
@@ -85,7 +85,7 @@ func (c *Cleaner) logf(format string, args ...any) {
 	msg := fmt.Sprintf("%s: %s", time.Now().Format(time.RFC3339), fmt.Sprintf(format, args...))
 	fmt.Println(msg)
 	if c.log != nil {
-		fmt.Fprintln(c.log, msg)
+		_, _ = fmt.Fprintln(c.log, msg)
 	}
 }
 
