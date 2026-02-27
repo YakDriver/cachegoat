@@ -11,11 +11,23 @@ go install github.com/YakDriver/cachegoat@latest
 ## Usage
 
 ```bash
-cachegoat              # run cleanup
-cachegoat --dry-run    # show what would be cleaned
-cachegoat --config     # show resolved configuration
-cachegoat --force      # run even if Go build is active
+cachegoat               # run cleanup
+cachegoat --dry-run     # show what would be cleaned
+cachegoat --config      # show resolved configuration
+cachegoat --force       # run even if Go build is active
+cachegoat --recommend   # show setup recommendations
+cachegoat --schedule    # create and enable scheduled cleanup
+cachegoat --unschedule  # remove scheduled cleanup
 ```
+
+### Recommendations
+
+The `--recommend` flag analyzes your setup and provides suggestions:
+
+- Detects CrowdStrike and recommends moving caches to `/tmp` to avoid scanning overhead
+- Warns about large cache sizes
+- Checks if scheduled cleanup is configured
+- Shows OS-specific scheduling instructions
 
 ## Configuration
 
@@ -52,7 +64,22 @@ log_path: /tmp/cachegoat.log
 
 ## Automatic Scheduling
 
-### macOS (launchd)
+The easiest way to set up scheduled cleanup:
+
+```bash
+cachegoat --schedule    # creates and enables scheduler for your OS
+cachegoat --unschedule  # removes it
+```
+
+This automatically configures:
+- macOS: launchd (runs every 2 hours)
+- Linux with systemd: systemd timer
+- Linux without systemd: cron
+
+### Manual Setup
+
+<details>
+<summary>macOS (launchd)</summary>
 
 Create `~/Library/LaunchAgents/com.cachegoat.plist`:
 
@@ -77,8 +104,10 @@ Load it:
 ```bash
 launchctl load ~/Library/LaunchAgents/com.cachegoat.plist
 ```
+</details>
 
-### Linux (cron)
+<details>
+<summary>Linux (cron)</summary>
 
 ```bash
 crontab -e
@@ -88,8 +117,10 @@ Add (runs every 2 hours):
 ```
 0 */2 * * * /home/YOUR_USERNAME/go/bin/cachegoat
 ```
+</details>
 
-### Linux (systemd timer)
+<details>
+<summary>Linux (systemd timer)</summary>
 
 Create `~/.config/systemd/user/cachegoat.service`:
 ```ini
@@ -117,6 +148,7 @@ Enable:
 ```bash
 systemctl --user enable --now cachegoat.timer
 ```
+</details>
 
 ## License
 
