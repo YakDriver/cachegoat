@@ -51,14 +51,14 @@ Create `~/.cachegoat.yml`:
 
 ```yaml
 build_cache:
-  path: /tmp/go-cache
-  max_size_gb: 30        # purge when cache exceeds this size
+  path: /tmp/go-cache      # optional: defaults to 'go env GOCACHE'
+  max_size_gb: 30          # purge when cache exceeds this size
 
 mod_cache:
-  path: /tmp/go-mod-cache
-  max_size_gb: 10        # purge when cache exceeds this size
+  path: /tmp/go-mod-cache  # optional: defaults to 'go env GOMODCACHE'
+  max_size_gb: 10          # purge when cache exceeds this size
 
-protect_builds: true     # skip cleanup if go build/test is running
+protect_builds: true       # skip cleanup if go build/test is running
 log_path: /tmp/cachegoat.log
 ```
 
