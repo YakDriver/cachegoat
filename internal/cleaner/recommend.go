@@ -37,7 +37,7 @@ func Recommend(cfg *config.Config) {
 		} else {
 			fmt.Println("   ✓ Mod cache already in /tmp (good)")
 		}
-		
+
 		if needsUpdate {
 			fmt.Print("\n❓ Apply CrowdStrike recommendations, including updating env vars in your shell profile? (y/N): ")
 			var response string
@@ -178,10 +178,10 @@ func hasScheduledCleanup() bool {
 
 func applyCacheRecommendations() {
 	fmt.Println("\n🔧 Applying cache recommendations...")
-	
+
 	// Find shell profile files and update them
 	updated := false
-	
+
 	// Check common profile files
 	home, _ := os.UserHomeDir()
 	profileFiles := []string{
@@ -189,38 +189,38 @@ func applyCacheRecommendations() {
 		filepath.Join(home, ".zshrc"),
 		filepath.Join(home, ".profile"),
 		filepath.Join(home, ".bash_profile"),
-		filepath.Join(home, ".zprofile"),        // zsh login profile
-		filepath.Join(home, ".zshenv"),          // zsh environment (always sourced)
-		filepath.Join(home, ".bash_login"),      // bash login alternative
+		filepath.Join(home, ".zprofile"),                // zsh login profile
+		filepath.Join(home, ".zshenv"),                  // zsh environment (always sourced)
+		filepath.Join(home, ".bash_login"),              // bash login alternative
 		filepath.Join(home, ".config/fish/config.fish"), // fish shell
-		filepath.Join(home, ".tcshrc"),          // tcsh/csh
-		filepath.Join(home, ".cshrc"),           // csh
-		filepath.Join(home, ".kshrc"),           // korn shell
+		filepath.Join(home, ".tcshrc"),                  // tcsh/csh
+		filepath.Join(home, ".cshrc"),                   // csh
+		filepath.Join(home, ".kshrc"),                   // korn shell
 	}
-	
+
 	for _, profileFile := range profileFiles {
 		if updateProfileFile(profileFile) {
 			updated = true
 		}
 	}
-	
+
 	if !updated {
 		// Fallback to go env -w if no profile files were updated
 		if err := exec.Command("go", "env", "-w", "GOCACHE=/tmp/go-cache").Run(); err != nil {
 			fmt.Printf("❌ Failed to set GOCACHE: %v\n", err)
 			return
 		}
-		
+
 		if err := exec.Command("go", "env", "-w", "GOMODCACHE=/tmp/go-mod-cache").Run(); err != nil {
 			fmt.Printf("❌ Failed to set GOMODCACHE: %v\n", err)
 			return
 		}
-		
+
 		fmt.Println("✅ Cache paths set using 'go env -w'")
 		fmt.Println("   → GOCACHE=/tmp/go-cache")
 		fmt.Println("   → GOMODCACHE=/tmp/go-mod-cache")
 	}
-	
+
 	fmt.Println("\n💡 Restart your shell or run 'source <profile-file>' to apply changes")
 }
 
@@ -229,16 +229,16 @@ func updateProfileFile(profileFile string) bool {
 	if err != nil {
 		return false // File doesn't exist or can't read
 	}
-	
+
 	content := string(data)
 	updated := false
 	isFish := strings.Contains(profileFile, "fish")
-	
+
 	// Update GOCACHE if found
 	if strings.Contains(content, "GOCACHE") {
 		var re *regexp.Regexp
 		var replacement string
-		
+
 		if isFish {
 			re = regexp.MustCompile(`set -x GOCACHE .*`)
 			replacement = "set -x GOCACHE /tmp/go-cache"
@@ -246,19 +246,19 @@ func updateProfileFile(profileFile string) bool {
 			re = regexp.MustCompile(`export\s+GOCACHE=.*`)
 			replacement = "export GOCACHE=/tmp/go-cache"
 		}
-		
+
 		if re.MatchString(content) {
 			content = re.ReplaceAllString(content, replacement)
 			updated = true
 			fmt.Printf("✅ Updated GOCACHE in %s\n", profileFile)
 		}
 	}
-	
+
 	// Update GOMODCACHE if found
 	if strings.Contains(content, "GOMODCACHE") {
 		var re *regexp.Regexp
 		var replacement string
-		
+
 		if isFish {
 			re = regexp.MustCompile(`set -x GOMODCACHE .*`)
 			replacement = "set -x GOMODCACHE /tmp/go-mod-cache"
@@ -266,20 +266,20 @@ func updateProfileFile(profileFile string) bool {
 			re = regexp.MustCompile(`export\s+GOMODCACHE=.*`)
 			replacement = "export GOMODCACHE=/tmp/go-mod-cache"
 		}
-		
+
 		if re.MatchString(content) {
 			content = re.ReplaceAllString(content, replacement)
 			updated = true
 			fmt.Printf("✅ Updated GOMODCACHE in %s\n", profileFile)
 		}
 	}
-	
+
 	if updated {
 		if err := os.WriteFile(profileFile, []byte(content), 0644); err != nil {
 			fmt.Printf("❌ Failed to write %s: %v\n", profileFile, err)
 			return false
 		}
 	}
-	
+
 	return updated
 }
