@@ -41,7 +41,7 @@ func Recommend(cfg *config.Config) {
 		if needsUpdate {
 			fmt.Print("\n❓ Apply CrowdStrike recommendations, including updating env vars in your shell profile? (y/N): ")
 			var response string
-			fmt.Scanln(&response)
+			_, _ = fmt.Scanln(&response)
 			if strings.ToLower(response) == "y" || strings.ToLower(response) == "yes" {
 				applyCacheRecommendations()
 			}
@@ -71,7 +71,7 @@ func Recommend(cfg *config.Config) {
 		fmt.Println("\n⚠️  No scheduled cleanup detected")
 		fmt.Print("❓ Set up automatic scheduled cleanup? (y/N): ")
 		var response string
-		fmt.Scanln(&response)
+		_, _ = fmt.Scanln(&response)
 		if strings.ToLower(response) == "y" || strings.ToLower(response) == "yes" {
 			if err := Schedule(); err != nil {
 				fmt.Printf("❌ Failed to schedule cleanup: %v\n", err)
