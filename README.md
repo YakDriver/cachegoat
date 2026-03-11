@@ -26,9 +26,13 @@ cachegoat --unschedule  # remove scheduled cleanup
 The `--recommend` flag analyzes your setup and provides suggestions:
 
 - Detects CrowdStrike and recommends moving caches to `/tmp` to avoid scanning overhead
+- **Interactive setup**: Offers to automatically update cache paths in your shell profile
 - Warns about large cache sizes
 - Checks if scheduled cleanup is configured
+- **One-click scheduling**: Offers to automatically set up scheduled cleanup
 - Shows OS-specific scheduling instructions
+
+Run `cachegoat --recommend` for a complete interactive setup experience that can configure both optimal cache paths and automatic scheduling.
 
 ## Configuration
 
