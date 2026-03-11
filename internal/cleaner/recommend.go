@@ -44,7 +44,6 @@ func Recommend(cfg *config.Config) {
 			fmt.Scanln(&response)
 			if strings.ToLower(response) == "y" || strings.ToLower(response) == "yes" {
 				applyCacheRecommendations()
-				return
 			}
 		}
 		fmt.Println()
@@ -69,15 +68,25 @@ func Recommend(cfg *config.Config) {
 
 	// Check scheduling
 	if !hasScheduledCleanup() {
-		fmt.Println("⚠️  No scheduled cleanup detected")
-		printScheduleInstructions()
-		fmt.Println()
+		fmt.Println("\n⚠️  No scheduled cleanup detected")
+		fmt.Print("❓ Set up automatic scheduled cleanup? (y/N): ")
+		var response string
+		fmt.Scanln(&response)
+		if strings.ToLower(response) == "y" || strings.ToLower(response) == "yes" {
+			if err := Schedule(); err != nil {
+				fmt.Printf("❌ Failed to schedule cleanup: %v\n", err)
+			} else {
+				fmt.Println("✅ Scheduled cleanup configured successfully!")
+			}
+		} else {
+			fmt.Println("\nManual setup instructions:")
+			printScheduleInstructions()
+		}
 	} else {
-		fmt.Println("✓ Scheduled cleanup detected")
-		fmt.Println()
+		fmt.Println("\n✓ Scheduled cleanup detected")
 	}
 
-	fmt.Println("Current config:")
+	fmt.Println("\nCurrent config:")
 	fmt.Print(cfg.String())
 }
 
