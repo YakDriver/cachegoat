@@ -15,9 +15,6 @@ func TestDefaults(t *testing.T) {
 	if cfg.ModCache.MaxSizeGB != 10 {
 		t.Errorf("expected mod max 10GB, got %d", cfg.ModCache.MaxSizeGB)
 	}
-	if cfg.ModCache.MaxAgeDays != 7 {
-		t.Errorf("expected mod max age 7 days, got %d", cfg.ModCache.MaxAgeDays)
-	}
 	if !cfg.ProtectBuilds {
 		t.Error("expected protect_builds true by default")
 	}
@@ -36,7 +33,6 @@ build_cache:
 mod_cache:
   path: /custom/mod
   max_size_gb: 20
-  max_age_days: 14
 protect_builds: false
 `
 	if err := os.WriteFile(filepath.Join(tmp, ".cachegoat.yml"), []byte(yaml), 0644); err != nil {
@@ -53,9 +49,6 @@ protect_builds: false
 	}
 	if cfg.BuildCache.MaxSizeGB != 50 {
 		t.Errorf("expected 50GB, got %d", cfg.BuildCache.MaxSizeGB)
-	}
-	if cfg.ModCache.MaxAgeDays != 14 {
-		t.Errorf("expected 14 days, got %d", cfg.ModCache.MaxAgeDays)
 	}
 	if cfg.ProtectBuilds {
 		t.Error("expected protect_builds false")

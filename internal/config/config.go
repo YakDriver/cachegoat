@@ -11,9 +11,8 @@ import (
 )
 
 type CacheConfig struct {
-	Path       string `yaml:"path"`
-	MaxSizeGB  int    `yaml:"max_size_gb"`
-	MaxAgeDays int    `yaml:"max_age_days,omitempty"`
+	Path      string `yaml:"path"`
+	MaxSizeGB int    `yaml:"max_size_gb"`
 }
 
 type Config struct {
@@ -32,24 +31,28 @@ func Load() (*Config, error) {
 		_ = yaml.Unmarshal(data, cfg)
 	}
 
-	// Environment overrides
-	if v := os.Getenv("CACHEGOAT_BUILD_PATH"); v != "" {
-		cfg.BuildCache.Path = v
-	} else if v := os.Getenv("GOCACHE"); v != "" && cfg.BuildCache.Path == "" {
-		cfg.BuildCache.Path = v
-	}
-	if v := os.Getenv("CACHEGOAT_MOD_PATH"); v != "" {
-		cfg.ModCache.Path = v
-	} else if v := os.Getenv("GOMODCACHE"); v != "" && cfg.ModCache.Path == "" {
-		cfg.ModCache.Path = v
-	}
-
-	// Fall back to go env
+	// Fall back to go env if not set in config
 	if cfg.BuildCache.Path == "" {
 		cfg.BuildCache.Path = goEnv("GOCACHE")
 	}
 	if cfg.ModCache.Path == "" {
 		cfg.ModCache.Path = goEnv("GOMODCACHE")
+	}
+
+	// Fall back to standard env vars if go env didn't work
+	if cfg.BuildCache.Path == "" {
+		cfg.BuildCache.Path = os.Getenv("GOCACHE")
+	}
+	if cfg.ModCache.Path == "" {
+		cfg.ModCache.Path = os.Getenv("GOMODCACHE")
+	}
+
+	// Environment overrides (highest priority)
+	if v := os.Getenv("CACHEGOAT_BUILD_PATH"); v != "" {
+		cfg.BuildCache.Path = v
+	}
+	if v := os.Getenv("CACHEGOAT_MOD_PATH"); v != "" {
+		cfg.ModCache.Path = v
 	}
 
 	return cfg, nil
@@ -58,7 +61,7 @@ func Load() (*Config, error) {
 func defaults() *Config {
 	return &Config{
 		BuildCache:    CacheConfig{MaxSizeGB: 30},
-		ModCache:      CacheConfig{MaxSizeGB: 10, MaxAgeDays: 7},
+		ModCache:      CacheConfig{MaxSizeGB: 10},
 		ProtectBuilds: true,
 		LogPath:       "/tmp/cachegoat.log",
 	}

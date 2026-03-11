@@ -33,10 +33,10 @@ The `--recommend` flag analyzes your setup and provides suggestions:
 ## Configuration
 
 cachegoat uses this priority order:
-1. Environment variables
-2. `~/.cachegoat.yml`
-3. `GOCACHE`/`GOMODCACHE` environment variables
-4. `go env` output
+1. `CACHEGOAT_BUILD_PATH` and `CACHEGOAT_MOD_PATH` environment variables (highest priority)
+2. `~/.cachegoat.yml` configuration file
+3. `go env GOCACHE` and `go env GOMODCACHE` 
+4. `GOCACHE` and `GOMODCACHE` environment variables (fallback)
 
 ### Environment Variables
 
@@ -51,15 +51,14 @@ Create `~/.cachegoat.yml`:
 
 ```yaml
 build_cache:
-  path: /tmp/go-cache
-  max_size_gb: 30        # purge when cache exceeds this size
+  path: /tmp/go-cache      # optional: defaults to 'go env GOCACHE'
+  max_size_gb: 30          # purge when cache exceeds this size
 
 mod_cache:
-  path: /tmp/go-mod-cache
-  max_size_gb: 10        # prune when cache exceeds this size
-  max_age_days: 7        # only remove files older than this
+  path: /tmp/go-mod-cache  # optional: defaults to 'go env GOMODCACHE'
+  max_size_gb: 10          # purge when cache exceeds this size
 
-protect_builds: true     # skip cleanup if go build/test is running
+protect_builds: true       # skip cleanup if go build/test is running
 log_path: /tmp/cachegoat.log
 ```
 

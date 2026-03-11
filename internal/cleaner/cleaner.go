@@ -50,8 +50,7 @@ func (c *Cleaner) cleanBuildCache() {
 	if sizeGB >= float64(c.cfg.BuildCache.MaxSizeGB) {
 		c.logf("purging build cache (>=%.0fGB threshold)", float64(c.cfg.BuildCache.MaxSizeGB))
 		if !c.dryRun {
-			_ = os.RemoveAll(path)
-			_ = os.MkdirAll(path, 0755)
+			_ = exec.Command("go", "clean", "-cache").Run()
 		}
 	}
 }
@@ -65,18 +64,9 @@ func (c *Cleaner) cleanModCache() {
 	c.logf("mod cache: %s (%.1fGB)", path, sizeGB)
 
 	if sizeGB >= float64(c.cfg.ModCache.MaxSizeGB) {
-		c.logf("pruning mod cache (>=%.0fGB threshold, >%d days old)", float64(c.cfg.ModCache.MaxSizeGB), c.cfg.ModCache.MaxAgeDays)
+		c.logf("purging mod cache (>=%.0fGB threshold)", float64(c.cfg.ModCache.MaxSizeGB))
 		if !c.dryRun {
-			cutoff := time.Now().AddDate(0, 0, -c.cfg.ModCache.MaxAgeDays)
-			_ = filepath.Walk(path, func(p string, info os.FileInfo, err error) error {
-				if err != nil || info.IsDir() {
-					return nil
-				}
-				if info.ModTime().Before(cutoff) {
-					_ = os.Remove(p)
-				}
-				return nil
-			})
+			_ = exec.Command("go", "clean", "-modcache").Run()
 		}
 	}
 }
