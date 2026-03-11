@@ -33,10 +33,10 @@ The `--recommend` flag analyzes your setup and provides suggestions:
 ## Configuration
 
 cachegoat uses this priority order:
-1. Environment variables
-2. `~/.cachegoat.yml`
-3. `GOCACHE`/`GOMODCACHE` environment variables
-4. `go env` output
+1. `CACHEGOAT_BUILD_PATH` and `CACHEGOAT_MOD_PATH` environment variables (highest priority)
+2. `~/.cachegoat.yml` configuration file
+3. `go env GOCACHE` and `go env GOMODCACHE` 
+4. `GOCACHE` and `GOMODCACHE` environment variables (fallback)
 
 ### Environment Variables
 
