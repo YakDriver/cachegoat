@@ -56,8 +56,7 @@ build_cache:
 
 mod_cache:
   path: /tmp/go-mod-cache
-  max_size_gb: 10        # prune when cache exceeds this size
-  max_age_days: 7        # only remove files older than this
+  max_size_gb: 10        # purge when cache exceeds this size
 
 protect_builds: true     # skip cleanup if go build/test is running
 log_path: /tmp/cachegoat.log

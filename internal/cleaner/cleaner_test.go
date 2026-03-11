@@ -85,7 +85,7 @@ func TestCleanBuildCache(t *testing.T) {
 	// This test verifies the command runs without error
 }
 
-func TestCleanModCache_AgeBasedPruning(t *testing.T) {
+func TestCleanModCache(t *testing.T) {
 	tmp := t.TempDir()
 
 	oldFile := filepath.Join(tmp, "old.bin")
@@ -105,7 +105,7 @@ func TestCleanModCache_AgeBasedPruning(t *testing.T) {
 	}
 
 	cfg := &config.Config{
-		ModCache:      config.CacheConfig{Path: tmp, MaxSizeGB: 0, MaxAgeDays: 7},
+		ModCache:      config.CacheConfig{Path: tmp, MaxSizeGB: 0},
 		ProtectBuilds: false,
 	}
 

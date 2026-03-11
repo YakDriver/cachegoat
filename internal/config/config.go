@@ -11,9 +11,8 @@ import (
 )
 
 type CacheConfig struct {
-	Path       string `yaml:"path"`
-	MaxSizeGB  int    `yaml:"max_size_gb"`
-	MaxAgeDays int    `yaml:"max_age_days,omitempty"`
+	Path      string `yaml:"path"`
+	MaxSizeGB int    `yaml:"max_size_gb"`
 }
 
 type Config struct {
@@ -58,7 +57,7 @@ func Load() (*Config, error) {
 func defaults() *Config {
 	return &Config{
 		BuildCache:    CacheConfig{MaxSizeGB: 30},
-		ModCache:      CacheConfig{MaxSizeGB: 10, MaxAgeDays: 7},
+		ModCache:      CacheConfig{MaxSizeGB: 10},
 		ProtectBuilds: true,
 		LogPath:       "/tmp/cachegoat.log",
 	}
