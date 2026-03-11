@@ -189,6 +189,13 @@ func applyCacheRecommendations() {
 		filepath.Join(home, ".zshrc"),
 		filepath.Join(home, ".profile"),
 		filepath.Join(home, ".bash_profile"),
+		filepath.Join(home, ".zprofile"),        // zsh login profile
+		filepath.Join(home, ".zshenv"),          // zsh environment (always sourced)
+		filepath.Join(home, ".bash_login"),      // bash login alternative
+		filepath.Join(home, ".config/fish/config.fish"), // fish shell
+		filepath.Join(home, ".tcshrc"),          // tcsh/csh
+		filepath.Join(home, ".cshrc"),           // csh
+		filepath.Join(home, ".kshrc"),           // korn shell
 	}
 	
 	for _, profileFile := range profileFiles {
@@ -225,24 +232,43 @@ func updateProfileFile(profileFile string) bool {
 	
 	content := string(data)
 	updated := false
+	isFish := strings.Contains(profileFile, "fish")
 	
 	// Update GOCACHE if found
-	if strings.Contains(content, "GOCACHE=") {
-		// Replace existing GOCACHE export
-		re := regexp.MustCompile(`export\s+GOCACHE=.*`)
+	if strings.Contains(content, "GOCACHE") {
+		var re *regexp.Regexp
+		var replacement string
+		
+		if isFish {
+			re = regexp.MustCompile(`set -x GOCACHE .*`)
+			replacement = "set -x GOCACHE /tmp/go-cache"
+		} else {
+			re = regexp.MustCompile(`export\s+GOCACHE=.*`)
+			replacement = "export GOCACHE=/tmp/go-cache"
+		}
+		
 		if re.MatchString(content) {
-			content = re.ReplaceAllString(content, "export GOCACHE=/tmp/go-cache")
+			content = re.ReplaceAllString(content, replacement)
 			updated = true
 			fmt.Printf("✅ Updated GOCACHE in %s\n", profileFile)
 		}
 	}
 	
 	// Update GOMODCACHE if found
-	if strings.Contains(content, "GOMODCACHE=") {
-		// Replace existing GOMODCACHE export
-		re := regexp.MustCompile(`export\s+GOMODCACHE=.*`)
+	if strings.Contains(content, "GOMODCACHE") {
+		var re *regexp.Regexp
+		var replacement string
+		
+		if isFish {
+			re = regexp.MustCompile(`set -x GOMODCACHE .*`)
+			replacement = "set -x GOMODCACHE /tmp/go-mod-cache"
+		} else {
+			re = regexp.MustCompile(`export\s+GOMODCACHE=.*`)
+			replacement = "export GOMODCACHE=/tmp/go-mod-cache"
+		}
+		
 		if re.MatchString(content) {
-			content = re.ReplaceAllString(content, "export GOMODCACHE=/tmp/go-mod-cache")
+			content = re.ReplaceAllString(content, replacement)
 			updated = true
 			fmt.Printf("✅ Updated GOMODCACHE in %s\n", profileFile)
 		}
