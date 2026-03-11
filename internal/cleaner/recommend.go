@@ -2,7 +2,10 @@ package cleaner
 
 import (
 	"fmt"
+	"os"
 	"os/exec"
+	"path/filepath"
+	"regexp"
 	"runtime"
 	"strings"
 
@@ -19,20 +22,32 @@ func Recommend(cfg *config.Config) {
 	// Check for CrowdStrike
 	if hasCrowdStrike() {
 		fmt.Println("⚠️  CrowdStrike detected")
+		needsUpdate := false
 		if !strings.HasPrefix(cfg.BuildCache.Path, "/tmp") {
 			fmt.Printf("   → Consider moving build cache to /tmp to avoid scanning\n")
-			fmt.Printf("     export GOCACHE=/tmp/go-cache\n\n")
+			fmt.Printf("     Current: %s\n", cfg.BuildCache.Path)
+			needsUpdate = true
 		} else {
 			fmt.Println("   ✓ Build cache already in /tmp (good)")
-			fmt.Println()
 		}
 		if !strings.HasPrefix(cfg.ModCache.Path, "/tmp") {
 			fmt.Printf("   → Consider moving mod cache to /tmp\n")
-			fmt.Printf("     export GOMODCACHE=/tmp/go-mod-cache\n\n")
+			fmt.Printf("     Current: %s\n", cfg.ModCache.Path)
+			needsUpdate = true
 		} else {
 			fmt.Println("   ✓ Mod cache already in /tmp (good)")
-			fmt.Println()
 		}
+		
+		if needsUpdate {
+			fmt.Print("\n❓ Apply CrowdStrike recommendations, including updating env vars in your shell profile? (y/N): ")
+			var response string
+			fmt.Scanln(&response)
+			if strings.ToLower(response) == "y" || strings.ToLower(response) == "yes" {
+				applyCacheRecommendations()
+				return
+			}
+		}
+		fmt.Println()
 	} else {
 		fmt.Println("✓ No CrowdStrike detected")
 		fmt.Println()
@@ -150,4 +165,86 @@ func hasScheduledCleanup() bool {
 	}
 	out, _ := exec.Command("crontab", "-l").Output()
 	return strings.Contains(string(out), "cachegoat")
+}
+
+func applyCacheRecommendations() {
+	fmt.Println("\n🔧 Applying cache recommendations...")
+	
+	// Find shell profile files and update them
+	updated := false
+	
+	// Check common profile files
+	home, _ := os.UserHomeDir()
+	profileFiles := []string{
+		filepath.Join(home, ".bashrc"),
+		filepath.Join(home, ".zshrc"),
+		filepath.Join(home, ".profile"),
+		filepath.Join(home, ".bash_profile"),
+	}
+	
+	for _, profileFile := range profileFiles {
+		if updateProfileFile(profileFile) {
+			updated = true
+		}
+	}
+	
+	if !updated {
+		// Fallback to go env -w if no profile files were updated
+		if err := exec.Command("go", "env", "-w", "GOCACHE=/tmp/go-cache").Run(); err != nil {
+			fmt.Printf("❌ Failed to set GOCACHE: %v\n", err)
+			return
+		}
+		
+		if err := exec.Command("go", "env", "-w", "GOMODCACHE=/tmp/go-mod-cache").Run(); err != nil {
+			fmt.Printf("❌ Failed to set GOMODCACHE: %v\n", err)
+			return
+		}
+		
+		fmt.Println("✅ Cache paths set using 'go env -w'")
+		fmt.Println("   → GOCACHE=/tmp/go-cache")
+		fmt.Println("   → GOMODCACHE=/tmp/go-mod-cache")
+	}
+	
+	fmt.Println("\n💡 Restart your shell or run 'source <profile-file>' to apply changes")
+}
+
+func updateProfileFile(profileFile string) bool {
+	data, err := os.ReadFile(profileFile)
+	if err != nil {
+		return false // File doesn't exist or can't read
+	}
+	
+	content := string(data)
+	updated := false
+	
+	// Update GOCACHE if found
+	if strings.Contains(content, "GOCACHE=") {
+		// Replace existing GOCACHE export
+		re := regexp.MustCompile(`export\s+GOCACHE=.*`)
+		if re.MatchString(content) {
+			content = re.ReplaceAllString(content, "export GOCACHE=/tmp/go-cache")
+			updated = true
+			fmt.Printf("✅ Updated GOCACHE in %s\n", profileFile)
+		}
+	}
+	
+	// Update GOMODCACHE if found
+	if strings.Contains(content, "GOMODCACHE=") {
+		// Replace existing GOMODCACHE export
+		re := regexp.MustCompile(`export\s+GOMODCACHE=.*`)
+		if re.MatchString(content) {
+			content = re.ReplaceAllString(content, "export GOMODCACHE=/tmp/go-mod-cache")
+			updated = true
+			fmt.Printf("✅ Updated GOMODCACHE in %s\n", profileFile)
+		}
+	}
+	
+	if updated {
+		if err := os.WriteFile(profileFile, []byte(content), 0644); err != nil {
+			fmt.Printf("❌ Failed to write %s: %v\n", profileFile, err)
+			return false
+		}
+	}
+	
+	return updated
 }
