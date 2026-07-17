@@ -1,12 +1,17 @@
 # cachegoat
 
-Automatic Go cache cleanup tool. Keeps your build and module caches from eating all your disk space.
-
-## Installation
+**Keep Go's caches from eating your disk — and dragging down your builds.** Go never cleans up after itself: on a large codebase with regularly-updated dependencies, the build and module caches quietly grow to tens of gigabytes (sometimes terabytes). cachegoat purges them automatically once they cross a size limit you set, and helps you relocate them to `/tmp` to escape antivirus scan thrash from the likes of CrowdStrike Falcon.
 
 ```bash
 go install github.com/YakDriver/cachegoat@latest
+cachegoat --recommend   # detects your setup, moves caches off the AV hot path, and schedules cleanup
 ```
+
+**Why you'd want it**
+
+- **Unbounded growth.** Go keeps every build artifact and module version forever. cachegoat caps that, purging only when a cache exceeds the size you configure.
+- **Faster builds under antivirus.** Real-time scanners inspect every cache read and write. Moving caches to `/tmp` sidesteps that scan path — a real speedup on locked-down machines.
+- **Set and forget.** Runs on a schedule, never cleans mid-build, and keeps `/tmp` caches usable so relocating them doesn't break your builds.
 
 ## Usage
 
@@ -74,6 +79,31 @@ Storing caches under `/tmp` avoids CrowdStrike scanning overhead, but OS temp-di
 With `keep_warm` enabled (the default), each run refreshes the access time of idle cache files so the cleaner never considers them old enough to delete. Only idle files are touched, and the modification time is preserved (the access and inode-change times are advanced), so Go's own build-cache trimming is unaffected. Caches that just crossed their size threshold are purged first and skipped, so keep-warm never fights the size-based cleanup or adds disk usage.
 
 Keep-warm runs even while a build is active (`protect_builds` only defers the destructive purge) — an active build is exactly when idle dependencies most need protecting. Because it runs every 2 hours by default and refreshes files after a single idle day, `/tmp` caches stay usable indefinitely between size-based purges, with two days of margin before the cleaner's 3-day cutoff.
+
+## Troubleshooting: `no such file or directory` during a build
+
+If a build suddenly fails with something like this, even though you changed nothing:
+
+```
+# github.com/example/foo
+open /tmp/go-mod-cache/github.com/example/foo@v1.2.3/bar.go: no such file or directory
+```
+
+…your module cache is probably in a **half-populated state**. When caches live under `/tmp`, the OS temp cleaner deletes files that have gone untouched past its cutoff (3 days on macOS by default), which can leave a module directory that still exists but is missing some of its files. Go assumes an extracted module directory is complete and won't re-extract it, so the build fails with an unhelpful `no such file or directory` (or `cannot find package`).
+
+`keep_warm` (on by default) prevents this in normal day-to-day use, but you're more exposed if:
+
+- **You've tuned the timing.** Both the OS cleaner's cutoff and cachegoat's schedule are configurable. A shorter cleaner cutoff or a less frequent cachegoat run shrinks the safety margin.
+- **The machine sat idle past the cutoff.** Coming back from vacation is the classic case — a project's dependencies may not have been touched in well over 3 days.
+- **Scheduled runs were missed.** If cachegoat isn't scheduled, or its runs were skipped while the machine was off or asleep across the cutoff, idle files can age out before keep-warm refreshes them.
+
+**The fix is to wipe the affected cache so Go re-extracts it cleanly:**
+
+```bash
+go clean -cache -modcache
+```
+
+Then rebuild — Go re-downloads and re-extracts whatever it needs. (`go clean -modcache` alone usually does it, since the module cache is the fragile one; the build cache tolerates missing entries and simply rebuilds them.)
 
 ## Automatic Scheduling
 
