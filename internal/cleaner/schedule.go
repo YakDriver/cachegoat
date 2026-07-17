@@ -10,10 +10,7 @@ import (
 )
 
 func Schedule() error {
-	bin, err := os.Executable()
-	if err != nil {
-		bin = findBinary()
-	}
+	bin := scheduleBinaryPath()
 
 	switch runtime.GOOS {
 	case "darwin":
@@ -26,6 +23,42 @@ func Schedule() error {
 	default:
 		return fmt.Errorf("unsupported OS: %s", runtime.GOOS)
 	}
+}
+
+// scheduleBinaryPath chooses which binary to schedule. It prefers the cachegoat
+// on PATH — the one `go install` overwrites in place — so future upgrades are
+// picked up without re-scheduling. If the running binary isn't on PATH (for
+// example a one-off build in a source tree), it warns, because upgrades won't
+// be reflected automatically.
+func scheduleBinaryPath() string {
+	exe, _ := os.Executable()
+	exe = evalSymlinks(exe)
+
+	if p, err := exec.LookPath("cachegoat"); err == nil {
+		p = evalSymlinks(p)
+		if exe != "" && p != exe {
+			fmt.Printf("Note: scheduling the cachegoat on your PATH:\n  %s\n(not the binary you ran: %s)\n", p, exe)
+		}
+		return p
+	}
+
+	if exe != "" {
+		fmt.Printf("Warning: cachegoat is not on your PATH; scheduling:\n  %s\nUpgrades via 'go install' won't be picked up automatically — re-run --schedule after upgrading.\n", exe)
+		return exe
+	}
+	return findBinary()
+}
+
+// evalSymlinks resolves symlinks for stable path comparison, returning the
+// input unchanged if it can't be resolved.
+func evalSymlinks(p string) string {
+	if p == "" {
+		return ""
+	}
+	if r, err := filepath.EvalSymlinks(p); err == nil {
+		return r
+	}
+	return p
 }
 
 func Unschedule() error {

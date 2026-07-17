@@ -84,6 +84,12 @@ func Recommend(cfg *config.Config) {
 		}
 	} else {
 		fmt.Println("\n✓ Scheduled cleanup detected")
+		if sched, cur := scheduledBinary(), currentBinary(); sched != "" && cur != "" && sched != cur {
+			fmt.Printf("⚠️  Scheduled cleanup runs a different binary than the cachegoat on your PATH:\n")
+			fmt.Printf("     scheduled: %s\n", sched)
+			fmt.Printf("     on PATH:   %s\n", cur)
+			fmt.Printf("   → Re-run 'cachegoat --unschedule && cachegoat --schedule' to point it at the current binary.\n")
+		}
 	}
 
 	fmt.Println("\nCurrent config:")
@@ -151,6 +157,83 @@ func findBinary() string {
 		return path
 	}
 	return "/path/to/cachegoat"
+}
+
+// currentBinary returns the resolved path of the cachegoat that would run when
+// invoked normally: the one on PATH, or the running binary as a fallback.
+func currentBinary() string {
+	if p, err := exec.LookPath("cachegoat"); err == nil {
+		return evalSymlinks(p)
+	}
+	exe, _ := os.Executable()
+	return evalSymlinks(exe)
+}
+
+// scheduledBinary returns the resolved path of the binary the scheduler is
+// configured to run, or "" if it can't be determined.
+func scheduledBinary() string {
+	switch runtime.GOOS {
+	case "darwin":
+		return scheduledBinaryLaunchd()
+	case "linux":
+		if hasSystemd() {
+			return scheduledBinarySystemd()
+		}
+		return scheduledBinaryCron()
+	}
+	return ""
+}
+
+var launchdProgramArg = regexp.MustCompile(`(?s)<key>ProgramArguments</key>\s*<array>\s*<string>(.*?)</string>`)
+
+func scheduledBinaryLaunchd() string {
+	home, err := os.UserHomeDir()
+	if err != nil {
+		return ""
+	}
+	data, err := os.ReadFile(filepath.Join(home, "Library/LaunchAgents/com.cachegoat.plist"))
+	if err != nil {
+		return ""
+	}
+	m := launchdProgramArg.FindStringSubmatch(string(data))
+	if len(m) != 2 {
+		return ""
+	}
+	return evalSymlinks(strings.TrimSpace(m[1]))
+}
+
+func scheduledBinarySystemd() string {
+	home, err := os.UserHomeDir()
+	if err != nil {
+		return ""
+	}
+	data, err := os.ReadFile(filepath.Join(home, ".config/systemd/user/cachegoat.service"))
+	if err != nil {
+		return ""
+	}
+	for line := range strings.SplitSeq(string(data), "\n") {
+		if rest, ok := strings.CutPrefix(strings.TrimSpace(line), "ExecStart="); ok {
+			if fields := strings.Fields(rest); len(fields) > 0 {
+				return evalSymlinks(fields[0])
+			}
+		}
+	}
+	return ""
+}
+
+func scheduledBinaryCron() string {
+	out, _ := exec.Command("crontab", "-l").Output()
+	for line := range strings.SplitSeq(string(out), "\n") {
+		t := strings.TrimSpace(line)
+		if t == "" || strings.HasPrefix(t, "#") || !strings.Contains(t, "cachegoat") {
+			continue
+		}
+		// cron format: minute hour dom month dow command...
+		if fields := strings.Fields(t); len(fields) >= 6 {
+			return evalSymlinks(fields[5])
+		}
+	}
+	return ""
 }
 
 func hasSystemd() bool {

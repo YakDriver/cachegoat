@@ -25,6 +25,7 @@ cachegoat --dry-run     # show what would be cleaned
 cachegoat --config      # show resolved configuration
 cachegoat --force       # run even if Go build is active
 cachegoat --help        # show usage
+cachegoat --version     # print version and exit
 cachegoat --recommend   # show setup recommendations
 cachegoat --schedule    # create and enable scheduled cleanup
 cachegoat --unschedule  # remove scheduled cleanup
@@ -38,10 +39,14 @@ The `--recommend` flag analyzes your setup and provides suggestions:
 - **Interactive setup**: Offers to automatically update cache paths in your shell profile
 - Warns about large cache sizes
 - Checks if scheduled cleanup is configured
+- Warns if scheduled cleanup points at a different binary than the cachegoat on your `PATH` (a common cause of "I upgraded but nothing changed")
+- Checks for a newer release via the Go module proxy (honoring `GOPROXY`, not the GitHub API)
 - **One-click scheduling**: Offers to automatically set up scheduled cleanup
 - Shows OS-specific scheduling instructions
 
 Run `cachegoat --recommend` for a complete interactive setup experience that can configure both optimal cache paths and automatic scheduling.
+
+The update check runs only under `--recommend`, so routine and scheduled runs stay silent and offline.
 
 ## Configuration
 
@@ -122,6 +127,8 @@ This automatically configures:
 - macOS: launchd (runs every 2 hours)
 - Linux with systemd: systemd timer
 - Linux without systemd: cron
+
+`--schedule` targets the cachegoat on your `PATH` — the binary `go install` overwrites in place — so upgrading with `go install github.com/YakDriver/cachegoat@latest` is picked up automatically, with no need to re-schedule. If you schedule a one-off build that isn't on your `PATH`, `--schedule` warns you, and `--recommend` flags it later if the scheduled binary drifts from the installed one.
 
 ### Manual Setup
 
