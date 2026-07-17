@@ -19,6 +19,7 @@ type Config struct {
 	BuildCache    CacheConfig `yaml:"build_cache"`
 	ModCache      CacheConfig `yaml:"mod_cache"`
 	ProtectBuilds bool        `yaml:"protect_builds"`
+	KeepWarm      bool        `yaml:"keep_warm"`
 	LogPath       string      `yaml:"log_path"`
 }
 
@@ -63,6 +64,7 @@ func defaults() *Config {
 		BuildCache:    CacheConfig{MaxSizeGB: 30},
 		ModCache:      CacheConfig{MaxSizeGB: 10},
 		ProtectBuilds: true,
+		KeepWarm:      true,
 		LogPath:       "/tmp/cachegoat.log",
 	}
 }

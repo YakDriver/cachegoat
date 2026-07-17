@@ -18,6 +18,27 @@ func TestDefaults(t *testing.T) {
 	if !cfg.ProtectBuilds {
 		t.Error("expected protect_builds true by default")
 	}
+	if !cfg.KeepWarm {
+		t.Error("expected keep_warm true by default")
+	}
+}
+
+func TestLoadKeepWarmFalse(t *testing.T) {
+	tmp := t.TempDir()
+	t.Setenv("HOME", tmp)
+
+	yaml := "keep_warm: false\n"
+	if err := os.WriteFile(filepath.Join(tmp, ".cachegoat.yml"), []byte(yaml), 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	cfg, err := Load()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if cfg.KeepWarm {
+		t.Error("expected keep_warm false when set in config")
+	}
 }
 
 func TestLoadFromYAML(t *testing.T) {
