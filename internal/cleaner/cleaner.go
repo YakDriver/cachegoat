@@ -34,15 +34,27 @@ func (c *Cleaner) Run() error {
 		}
 	}
 
-	c.cleanBuildCache()
-	c.cleanModCache()
+	buildPurged := c.cleanBuildCache()
+	modPurged := c.cleanModCache()
+
+	// Keep surviving cache files warm so OS temp cleaners don't prune them and
+	// leave the cache half-populated. Skip a cache that was just purged: it is
+	// empty (or nearly so), and there is nothing worth keeping warm.
+	if c.cfg.KeepWarm {
+		if !buildPurged {
+			c.keepWarm(c.cfg.BuildCache.Path)
+		}
+		if !modPurged {
+			c.keepWarm(c.cfg.ModCache.Path)
+		}
+	}
 	return nil
 }
 
-func (c *Cleaner) cleanBuildCache() {
+func (c *Cleaner) cleanBuildCache() bool {
 	path := c.cfg.BuildCache.Path
 	if path == "" {
-		return
+		return false
 	}
 	sizeGB := dirSizeGB(path)
 	c.logf("build cache: %s (%.1fGB)", path, sizeGB)
@@ -52,13 +64,15 @@ func (c *Cleaner) cleanBuildCache() {
 		if !c.dryRun {
 			_ = exec.Command("go", "clean", "-cache").Run()
 		}
+		return true
 	}
+	return false
 }
 
-func (c *Cleaner) cleanModCache() {
+func (c *Cleaner) cleanModCache() bool {
 	path := c.cfg.ModCache.Path
 	if path == "" {
-		return
+		return false
 	}
 	sizeGB := dirSizeGB(path)
 	c.logf("mod cache: %s (%.1fGB)", path, sizeGB)
@@ -68,7 +82,9 @@ func (c *Cleaner) cleanModCache() {
 		if !c.dryRun {
 			_ = exec.Command("go", "clean", "-modcache").Run()
 		}
+		return true
 	}
+	return false
 }
 
 func (c *Cleaner) logf(format string, args ...any) {
