@@ -13,6 +13,10 @@ cachegoat --recommend   # detects your setup, moves caches off the AV hot path, 
 - **Faster builds under antivirus.** Real-time scanners inspect every cache read and write. Moving caches to `/tmp` sidesteps that scan path — a real speedup on locked-down machines.
 - **Set and forget.** Runs on a schedule, never cleans mid-build, and keeps `/tmp` caches usable so relocating them doesn't break your builds.
 
+## Platform support
+
+cachegoat is built and tested on **macOS and Linux** — that's where the caching, keep-warm, and scheduling behavior is verified. It may compile on other platforms, but keep-warm is a no-op there and nothing is tested. Interested in Windows or another platform? [Open an issue](https://github.com/YakDriver/cachegoat/issues) — we'd love to hear about it.
+
 ## Usage
 
 ```bash
