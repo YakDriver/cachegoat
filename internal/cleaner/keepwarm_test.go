@@ -1,8 +1,16 @@
+//go:build darwin || linux
+
+// These tests assert on access-time changes, which are only observable on
+// platforms with a real fileATime implementation (see atime_darwin.go /
+// atime_linux.go). On other platforms fileATime falls back to ModTime, which
+// keep-warm deliberately preserves, so the assertions would not hold.
+
 package cleaner
 
 import (
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 	"time"
 
@@ -110,6 +118,30 @@ func TestKeepWarmEmptyPath(t *testing.T) {
 	c := New(&config.Config{}, false, false)
 	if touched, scanned := c.keepWarm(""); touched != 0 || scanned != 0 {
 		t.Errorf("empty path: touched=%d scanned=%d, want 0/0", touched, scanned)
+	}
+}
+
+// TestKeepWarmMissingPathLogged verifies a missing/unreadable cache path is
+// reported rather than logged as a successful no-op.
+func TestKeepWarmMissingPathLogged(t *testing.T) {
+	tmp := t.TempDir()
+	logPath := filepath.Join(tmp, "cachegoat.log")
+	f, err := os.Create(logPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	c := New(&config.Config{}, false, false)
+	c.log = f
+
+	touched, scanned := c.keepWarm(filepath.Join(tmp, "does-not-exist"))
+	_ = f.Close()
+
+	if touched != 0 || scanned != 0 {
+		t.Fatalf("touched=%d scanned=%d, want 0/0", touched, scanned)
+	}
+	data, _ := os.ReadFile(logPath)
+	if !strings.Contains(string(data), "skipped") {
+		t.Errorf("expected missing path to be logged as skipped, got: %q", string(data))
 	}
 }
 
