@@ -19,8 +19,10 @@ var releaseVersion = regexp.MustCompile(`^v\d+\.\d+\.\d+$`)
 
 // version returns a human-readable version derived from the binary's embedded
 // build info, so it always matches the version that was installed — no
-// constant to bump. Binaries installed via `go install module@vX` report that
-// tag; local builds report "dev" plus a short commit hash when available.
+// constant to bump. A binary installed via `go install module@vX` reports that
+// version exactly (proxy downloads carry no VCS metadata, so no commit suffix
+// is added). A build from a source tree appends the short commit hash when
+// available, and reports "dev" when no module version is embedded.
 func version() string {
 	info, ok := debug.ReadBuildInfo()
 	if !ok {
