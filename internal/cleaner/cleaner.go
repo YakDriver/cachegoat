@@ -22,11 +22,6 @@ func New(cfg *config.Config, dryRun, force bool) *Cleaner {
 }
 
 func (c *Cleaner) Run() error {
-	if c.cfg.ProtectBuilds && !c.force && goBuildActive() {
-		fmt.Println("Go build active, skipping (use --force to override)")
-		return nil
-	}
-
 	if c.cfg.LogPath != "" && !c.dryRun {
 		if f, err := os.OpenFile(c.cfg.LogPath, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644); err == nil {
 			c.log = f
@@ -34,12 +29,21 @@ func (c *Cleaner) Run() error {
 		}
 	}
 
-	buildPurged := c.cleanBuildCache()
-	modPurged := c.cleanModCache()
+	var buildPurged, modPurged bool
+	if c.cfg.ProtectBuilds && !c.force && goBuildActive() {
+		// A build is running: skip the destructive purge, but still keep the
+		// cache warm below. Refreshing access times is harmless mid-build and
+		// is exactly when idle dependencies most need protecting.
+		c.logf("Go build active, skipping cache purge (use --force to override)")
+	} else {
+		buildPurged = c.cleanBuildCache()
+		modPurged = c.cleanModCache()
+	}
 
 	// Keep surviving cache files warm so OS temp cleaners don't prune them and
-	// leave the cache half-populated. Skip a cache that was just purged: it is
-	// empty (or nearly so), and there is nothing worth keeping warm.
+	// leave the cache half-populated. This runs regardless of build activity.
+	// Skip a cache that was just purged: it is empty (or nearly so), and there
+	// is nothing worth keeping warm.
 	if c.cfg.KeepWarm {
 		if !buildPurged {
 			c.keepWarm(c.cfg.BuildCache.Path)
@@ -95,7 +99,9 @@ func (c *Cleaner) logf(format string, args ...any) {
 	}
 }
 
-func goBuildActive() bool {
+// goBuildActive reports whether a Go build/test/install/run process is
+// currently running. It is a var so tests can substitute it.
+var goBuildActive = func() bool {
 	return exec.Command("pgrep", "-qf", "go (build|test|install|run)").Run() == nil
 }
 

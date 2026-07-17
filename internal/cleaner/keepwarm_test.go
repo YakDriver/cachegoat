@@ -136,7 +136,33 @@ func TestRunKeepsWarm(t *testing.T) {
 	}
 }
 
-// TestRunKeepWarmDisabled verifies the toggle is honored.
+// TestRunKeepsWarmDuringActiveBuild verifies keep-warm still refreshes idle
+// files when a build is active (only the destructive purge is skipped).
+func TestRunKeepsWarmDuringActiveBuild(t *testing.T) {
+	orig := goBuildActive
+	goBuildActive = func() bool { return true }
+	t.Cleanup(func() { goBuildActive = orig })
+
+	tmp := t.TempDir()
+	f := filepath.Join(tmp, "idle.bin")
+	oldTime := time.Now().Add(-5 * 24 * time.Hour)
+	writeFileAged(t, f, 0644, oldTime, oldTime)
+
+	cfg := &config.Config{
+		BuildCache:    config.CacheConfig{Path: tmp, MaxSizeGB: 999},
+		ProtectBuilds: true, // would normally block a purge
+		KeepWarm:      true,
+	}
+	c := New(cfg, false, false)
+	if err := c.Run(); err != nil {
+		t.Fatal(err)
+	}
+
+	if got := atimeOf(t, f); time.Since(got) > time.Minute {
+		t.Errorf("keep-warm did not run during active build: %v", got)
+	}
+}
+
 func TestRunKeepWarmDisabled(t *testing.T) {
 	tmp := t.TempDir()
 	f := filepath.Join(tmp, "idle.bin")

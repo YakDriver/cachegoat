@@ -73,7 +73,7 @@ Storing caches under `/tmp` avoids CrowdStrike scanning overhead, but OS temp-di
 
 With `keep_warm` enabled (the default), each run refreshes the access time of idle cache files so the cleaner never considers them old enough to delete. Only idle files are touched, and only their access time is advanced — modification times are preserved, so Go's own build-cache trimming is unaffected. Caches that just crossed their size threshold are purged first and skipped, so keep-warm never fights the size-based cleanup or adds disk usage.
 
-Because it runs on the same schedule as cleanup (every 2 hours by default, well inside the 3-day window), keep-warm keeps `/tmp` caches usable indefinitely between size-based purges.
+Keep-warm runs even while a build is active (`protect_builds` only defers the destructive purge) — an active build is exactly when idle dependencies most need protecting. Because it runs every 2 hours by default and refreshes files after a single idle day, `/tmp` caches stay usable indefinitely between size-based purges, with two days of margin before the cleaner's 3-day cutoff.
 
 ## Automatic Scheduling
 

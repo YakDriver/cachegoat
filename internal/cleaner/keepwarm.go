@@ -9,9 +9,9 @@ import (
 
 // warmMaxIdle is how long a cache file may go untouched before keep-warm
 // refreshes it. macOS deletes files under /tmp once their atime, mtime, and
-// ctime are all older than 3 days, so refreshing at 2 days leaves a full day
+// ctime are all older than 3 days, so refreshing at 1 day leaves two full days
 // of margin before the daily cleaner runs.
-const warmMaxIdle = 2 * 24 * time.Hour
+const warmMaxIdle = 24 * time.Hour
 
 // keepWarm refreshes the access time of cache files that have gone idle, so
 // that OS temp-directory cleaners (such as macOS's tmp_cleaner) do not prune
