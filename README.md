@@ -63,8 +63,17 @@ mod_cache:
   max_size_gb: 10          # purge when cache exceeds this size
 
 protect_builds: true       # skip cleanup if go build/test is running
+keep_warm: true            # refresh idle cache files so macOS/Linux temp cleaners don't prune them
 log_path: /tmp/cachegoat.log
 ```
+
+## Keeping /tmp caches warm
+
+Storing caches under `/tmp` avoids CrowdStrike scanning overhead, but OS temp-directory cleaners prune `/tmp` on a schedule — macOS (`/usr/libexec/tmp_cleaner`) deletes files untouched for 3 days, and Linux's `systemd-tmpfiles` does the same on its own timer. When that happens to an in-use module cache, Go is left with half-populated `mod@version/` directories and builds fail with errors like `open .../foo.go: no such file or directory`. Go won't re-extract a directory it thinks already exists, so the only reliable fix is wiping the whole cache.
+
+With `keep_warm` enabled (the default), each run refreshes the access time of idle cache files so the cleaner never considers them old enough to delete. Only idle files are touched, and only their access time is advanced — modification times are preserved, so Go's own build-cache trimming is unaffected. Caches that just crossed their size threshold are purged first and skipped, so keep-warm never fights the size-based cleanup or adds disk usage.
+
+Because it runs on the same schedule as cleanup (every 2 hours by default, well inside the 3-day window), keep-warm keeps `/tmp` caches usable indefinitely between size-based purges.
 
 ## Automatic Scheduling
 
